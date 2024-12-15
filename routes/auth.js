@@ -13,11 +13,11 @@ router.post('/register', async (req, res) => {
         if (!username || !password) {
             return res.status(400).send('Username and password are required');
         }
-
-        // Check if user already exists
+        const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(409).send('User already exists');
         }
+        // Check if user already exists
 
         // Hash the password and save the user
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -25,6 +25,7 @@ router.post('/register', async (req, res) => {
         const savedUser = await newUser.save();
         res.status(201).json({ message: 'User registered successfully', user: savedUser });
     } catch (err) {
+        setError(error.response?.data || 'Error registering user. Please try again.');
         console.error('Error registering user:', err.message);
         res.status(500).send('Error registering user');
     }
