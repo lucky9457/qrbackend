@@ -100,4 +100,91 @@ router.get('/sort', authenticate, async (req, res) => {
     }
 });
 
+// Get book details by ID or ISBN
+router.get('/detail/:idOrIsbn', authenticate, async (req, res) => {
+    const { idOrIsbn } = req.params;
+
+    try {
+        // Check if the identifier is an ISBN or MongoDB ObjectId
+        const query = idOrIsbn.match(/^[0-9]+$/)
+            ? { isbn: idOrIsbn } // Query by ISBN if it's numeric
+            : { _id: idOrIsbn }; // Otherwise, query by MongoDB ObjectId
+
+        // Fetch the book details from the database
+        const book = await Book.findOne(query);
+
+        if (!book) {
+            return res.status(404).send('Book not found');
+        }
+
+        // Return the book details
+        res.status(200).json(book);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error fetching book details');
+    }
+});
+router.delete('/delete/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const book = await Book.findByIdAndDelete(id);
+
+        if (!book) {
+            return res.status(404).send('Book not found');
+        }
+
+        res.status(200).send('Book deleted successfully');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error deleting book');
+    }
+});
+
+// Edit book details
+router.put('/edit/:id', authenticate, async (req, res) => {
+    const { id } = req.params;
+    const updatedDetails = req.body;
+
+    try {
+        // Check if the book exists
+        const book = await Book.findById(id);
+        if (!book) {
+            return res.status(404).send('Book not found');
+        }
+
+        // Update QR Code if certain fields are changed
+        const fieldsForQRCode = [
+            'title',
+            'author',
+            'publisher',
+            'exam',
+            'subject',
+            'description',
+            'price',
+            'language',
+            'isbn',
+            'publicationDate'
+        ];
+        const shouldUpdateQRCode = Object.keys(updatedDetails).some(field =>
+            fieldsForQRCode.includes(field)
+        );
+
+        if (shouldUpdateQRCode) {
+            const qrData = JSON.stringify({ ...book.toObject(), ...updatedDetails });
+            updatedDetails.qrCode = await QRCode.toDataURL(qrData);
+        }
+
+        // Update book details
+        const updatedBook = await Book.findByIdAndUpdate(id, updatedDetails, { new: true });
+
+        res.status(200).json(updatedBook);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error editing book');
+    }
+});
+
+
+
 module.exports = router;
