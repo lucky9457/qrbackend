@@ -1,6 +1,6 @@
 const express = require('express');
 const QRCode = require('qrcode');
-const Book = require('../models/Book');
+const Book = require('../models/book');
 const authenticate = require('../middleware/authenticate');
 
 const router = express.Router();
